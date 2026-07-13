@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+csvenv/
+env/
+.env
+
+# Secrets — NEVER commit
+*.key
+*.pem
+*.secret
+.env.local
+.env.production
+config_local.py
+connection_strings.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter / Fabric Notebooks (local copies may have outputs)
+.ipynb_checkpoints/
+*.ipynb
+
+# Azure / Fabric
+.azure/
+azureconfig.json
+
+# Data files (too large for git)
+*.parquet
+*.csv
+data/
+
+# Power BI
+*.pbix
+
+# Logs
+*.log
+logs/

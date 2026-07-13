@@ -1,0 +1,15 @@
+# ClickStream Analytics Engine — Python Dependencies
+# Simulator + Eventstream Integration
+
+# Azure Event Hubs SDK (Eventstream uses Event Hubs protocol)
+azure-eventhub>=5.11.0
+
+# Data generation
+uuid7>=0.1.0
+faker>=18.0.0
+
+# Testing
+pytest>=7.0.0
+
+# Utilities
+python-dotenv>=1.0.0
