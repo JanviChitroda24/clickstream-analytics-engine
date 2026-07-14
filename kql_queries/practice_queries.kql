@@ -1,0 +1,127 @@
+// ============================================================
+// KQL Practice Queries — Hour 3 (Crash Course)
+// ------------------------------------------------------------
+// Run against the `Stocks` sample dataset in `clickstream_eventhouse`.
+// Columns: Date (datetime), Open/High/Low/Close/AdjClose (double),
+//          Volume (string), Ticker (string)  ~ 749K rows.
+//
+// Goal: build muscle memory for the pipe-based KQL paradigm before
+// real clickstream events flow. Key operators:
+//   where · summarize · extend · project · bin() · ago() · between
+//   render · count() · dcount() · has · let/in · make-series ·
+//   series_decompose_anomalies
+// ============================================================
+
+
+// Schema inspection — every column name + type. Always step 1.
+Stocks
+| getschema
+
+
+// Sample data (SELECT * LIMIT 10). `take` samples without full scan.
+Stocks
+| take 10
+
+
+// Row count.
+Stocks
+| count
+
+
+// Filter by ticker (SQL WHERE). Note `==` for equality.
+Stocks
+| where Ticker == "NVDA"
+| take 20
+
+
+// Project specific columns (SQL SELECT col1, col2, ...).
+Stocks
+| project Date, Ticker, Close, Volume
+| take 10
+
+
+// Summarize = GROUP BY. count() auto-creates column `count_`.
+Stocks
+| summarize row_count = count() by Ticker
+| order by row_count desc
+
+
+// Time bucketing with bin() — 30-day buckets of avg close.
+Stocks
+| summarize avg_close = avg(Close) by bin(Date, 30d), Ticker
+| where Ticker == "PYPL"
+| order by Date asc
+
+
+// Render a timechart (line chart over time).
+Stocks
+| where Ticker == "MSFT"
+| summarize avg_close = avg(Close) by bin(Date, 30d)
+| render timechart
+
+
+// extend — add a computed column (daily price range) without dropping others.
+Stocks
+| extend daily_range = High - Low
+| where Ticker == "MSFT"
+| project Date, Ticker, High, Low, daily_range
+| order by daily_range desc
+| take 10
+
+
+// Relative time filter with ago().
+Stocks
+| where Date > ago(10d)
+| summarize count() by Ticker
+| order by count_ desc
+
+
+// Multiple aggregations in one summarize. dcount() = fast approx distinct.
+Stocks
+| summarize
+    total_rows = count(),
+    distinct_tickers = dcount(Ticker),
+    avg_close = avg(Close),
+    max_high = max(High),
+    min_low = min(Low)
+
+
+// String matching with `has` — indexed full-token match (fast).
+Stocks
+| where Ticker has "GIS"
+| summarize count() by Ticker
+
+
+// between — inclusive date range.
+Stocks
+| where Date between (datetime(2020-01-01) .. datetime(2020-12-31))
+| where Ticker == "ICE"
+| summarize avg_close = avg(Close) by bin(Date, 7d)
+| render timechart
+
+
+// let (named subquery) + in (filter by results) — top-5 pattern.
+let top_tickers =
+    Stocks
+    | summarize row_count = count() by Ticker
+    | top 5 by row_count;
+Stocks
+| where Ticker in (top_tickers)
+| summarize avg_close = avg(Close) by bin(Date, 90d), Ticker
+| render timechart
+
+
+// make-series — evenly-spaced series, gaps filled with zeros.
+Stocks
+| where Ticker == "HSY"
+| make-series avg_close = avg(Close) on Date step 7d
+| render timechart
+
+
+// Anomaly detection (the showstopper). STL decomposition, 1.5 sensitivity.
+// This is the pattern Data Activator reuses for churn + volume anomalies.
+Stocks
+| where Ticker == "HON"
+| make-series avg_close = avg(Close) on Date step 7d
+| extend (anomalies, score, baseline) = series_decompose_anomalies(avg_close, 1.5)
+| render anomalychart with(anomalycolumns=anomalies)
