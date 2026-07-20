@@ -1,0 +1,78 @@
+// ============================================================
+// Hour 11 — Eventhouse Ingestion Verification Queries
+// ============================================================
+// Run against the `raw_events` table after the 14-day simulation.
+//
+// NOTE: Eventstream auto-mapped `event_timestamp` as STRING (System.String),
+// not datetime. So any query using bin()/ago()/between()/min()/max() on the
+// timestamp must first convert it:  | extend ts = todatetime(event_timestamp)
+// Queries that only filter/group string columns (event_type, user_id,
+// app_version) need no conversion.
+// ============================================================
+
+
+// --- Query 1: Total row count (baseline sanity check) ---
+raw_events
+| count
+
+
+// --- Query 2: Column schema (confirm types; properties=dynamic, ts=string) ---
+raw_events
+| getschema
+
+
+// --- Query 3: Event type distribution (all 12 types + null/empty malformed) ---
+raw_events
+| summarize count() by event_type
+| order by count_ desc
+
+
+// --- Query 4: Time span (FIXED — todatetime for chronological min/max) ---
+raw_events
+| extend ts = todatetime(event_timestamp)
+| summarize min_ts = min(ts), max_ts = max(ts)
+
+
+// --- Query 5: Daily volume — churning decay visible (FIXED) ---
+raw_events
+| extend ts = todatetime(event_timestamp)
+| where isnotnull(ts)
+| summarize daily_count = count() by bin(ts, 1d)
+| order by ts asc
+| render timechart with (title="Daily Event Volume — Churning Decay Visible")
+
+
+// --- Query 6: Events-per-user distribution (data skew: p50 vs p99) ---
+raw_events
+| summarize event_count = count() by user_id
+| summarize
+    avg_events = avg(event_count),
+    p50 = percentile(event_count, 50),
+    p90 = percentile(event_count, 90),
+    p99 = percentile(event_count, 99),
+    max_events = max(event_count)
+
+
+// --- Query 7: Duplicate detection (chaos ~2% — distinct duplicated ids) ---
+raw_events
+| summarize occurrence = count() by event_id
+| where occurrence > 1
+| summarize duplicate_event_count = count()
+
+
+// --- Query 8: Malformed detection (chaos ~0.5% — null/empty user or type) ---
+raw_events
+| where isempty(user_id) or isnull(user_id) or isempty(event_type) or isnull(event_type)
+| summarize malformed_count = count()
+
+
+// --- Query 9: App version split (~64/36 v2.3/v2.2) ---
+raw_events
+| summarize count() by app_version
+| render piechart with (title="App Version Distribution")
+
+
+// --- Query 10: Ad attribution funnel (impressions >> clicks >> conversions) ---
+raw_events
+| where event_type in ("ad_impression", "ad_click", "conversion")
+| summarize count() by event_type
