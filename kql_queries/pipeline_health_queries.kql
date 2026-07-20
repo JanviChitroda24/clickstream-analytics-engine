@@ -1,5 +1,5 @@
 // ============================================================
-// Hour 12 — Pipeline Health Monitoring Queries
+// Pipeline Health Monitoring Queries
 // ============================================================
 // Queryset: pipeline_health_queries  (connected to clickstream_eventhouse)
 // Three pillars of observability: VOLUME · QUALITY · DISTRIBUTION.
