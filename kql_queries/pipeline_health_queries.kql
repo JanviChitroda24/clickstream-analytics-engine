@@ -1,0 +1,88 @@
+// ============================================================
+// Hour 12 — Pipeline Health Monitoring Queries
+// ============================================================
+// Queryset: pipeline_health_queries  (connected to clickstream_eventhouse)
+// Three pillars of observability: VOLUME · QUALITY · DISTRIBUTION.
+//
+// NOTE: `event_timestamp` is stored as STRING → time functions need
+// `todatetime(event_timestamp)`. Each time-based query converts first.
+// Two flavors per volume query: SIMULATED (full Jul 1–14 range) and
+// PRODUCTION (rolling ago() window) for real-time monitoring.
+// ============================================================
+
+
+// ------------------------------------------------------------
+// Query 1 — Event Volume Over Time  (VOLUME: detects stalls/spikes)
+// ------------------------------------------------------------
+// Simulated (full range) — expect 14 bars, declining as churners drop off
+raw_events
+| extend ts = todatetime(event_timestamp)
+| where isnotnull(ts)
+| summarize event_count = count() by bin(ts, 1d)
+| order by ts asc
+| render timechart with (title="Daily Event Volume")
+
+// Production (rolling last hour, per-minute)
+raw_events
+| extend ts = todatetime(event_timestamp)
+| where ts > ago(1h)
+| summarize event_count = count() by bin(ts, 1m)
+| render timechart with (title="Event Volume (per minute)")
+
+
+// ------------------------------------------------------------
+// Query 2 — Schema Violation Detection  (QUALITY: dead-letter signal)
+// ------------------------------------------------------------
+raw_events
+| summarize
+    total = count(),
+    null_user = countif(isempty(user_id) or isnull(user_id)),
+    null_event_type = countif(isempty(event_type) or isnull(event_type)),
+    bad_timestamp = countif(isnull(todatetime(event_timestamp)))
+| extend violation_total = null_user + null_event_type + bad_timestamp
+| extend violation_rate_pct = round(todouble(violation_total) / todouble(total) * 100, 3)
+
+
+// ------------------------------------------------------------
+// Query 3 — Event Type Distribution  (DISTRIBUTION: behavioral anomalies)
+// ------------------------------------------------------------
+raw_events
+| summarize event_count = count() by event_type
+| extend pct = round(todouble(event_count) / todouble(toscalar(raw_events | count)) * 100, 1)
+| order by event_count desc
+| render columnchart with (title="Event Type Distribution")
+
+
+// ------------------------------------------------------------
+// Query 4 — App Version Split  (DISTRIBUTION: rollout health)
+// ------------------------------------------------------------
+raw_events
+| summarize event_count = count() by app_version
+| extend pct = round(todouble(event_count) / todouble(toscalar(raw_events | count)) * 100, 1)
+| render piechart with (title="App Version Split")
+
+
+// ------------------------------------------------------------
+// Query 5 — Duplicate Detection  (QUALITY: dedup requirement)
+// ------------------------------------------------------------
+raw_events
+| summarize occurrence = count() by event_id
+| where occurrence > 1
+| summarize
+    duplicate_event_ids = count(),
+    total_duplicate_rows = sum(occurrence)
+| extend total_events = toscalar(raw_events | count)
+| extend duplicate_rate_pct = round(todouble(duplicate_event_ids) / todouble(total_events) * 100, 2)
+
+
+// ------------------------------------------------------------
+// Query 6 — Top 20 Most Active Users  (DISTRIBUTION: skew / bot detection)
+// ------------------------------------------------------------
+raw_events
+| summarize
+    event_count = count(),
+    session_count = dcount(session_id),
+    event_types = dcount(event_type)
+    by user_id
+| top 20 by event_count desc
+| render barchart with (title="Top 20 Users by Event Count")
