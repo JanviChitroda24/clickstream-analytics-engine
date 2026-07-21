@@ -1,0 +1,82 @@
+// ============================================================
+// Hour 13 — KQL Materialized Views
+// ============================================================
+// Pre-computed aggregations the Eventhouse maintains automatically:
+// every new row in raw_events incrementally updates these views.
+// Consumers: Real-Time Dashboard (H14) + Data Activator triggers (H15).
+//
+// `backfill=true` → retroactively process the existing ~1.14M rows
+// (not just future data). Takes a minute or two.
+//
+// NOTE: event_timestamp is stored as STRING → todatetime() inside the view.
+// If a view rejects todatetime() (operator restriction), fall back to the
+// Fabric-added datetime column EventProcessedUtcTime (commented under each).
+// ============================================================
+
+
+// ------------------------------------------------------------
+// View 1 — EventVolumePerFiveMin  (dashboard volume + volume-drop trigger)
+// ------------------------------------------------------------
+.create materialized-view with (backfill=true) EventVolumePerFiveMin on table raw_events {
+    raw_events
+    | extend ts = todatetime(event_timestamp)
+    | where isnotnull(ts)
+    | summarize event_count = count() by bin(ts, 5m)
+}
+
+// Fallback (if todatetime() is rejected — uses Fabric's datetime column):
+// .create materialized-view with (backfill=true) EventVolumePerFiveMin on table raw_events {
+//     raw_events
+//     | summarize event_count = count() by bin(EventProcessedUtcTime, 5m)
+// }
+
+
+// ------------------------------------------------------------
+// View 2 — SchemaViolationRate  (quality gauge + degradation trigger)
+// ------------------------------------------------------------
+.create materialized-view with (backfill=true) SchemaViolationRate on table raw_events {
+    raw_events
+    | extend ts = todatetime(event_timestamp)
+    | where isnotnull(ts)
+    | summarize
+        total = count(),
+        violations = countif(isempty(user_id) or isnull(user_id) or isempty(event_type) or isnull(event_type))
+      by bin(ts, 5m)
+}
+
+
+// ------------------------------------------------------------
+// View 3 — UserDailyActivity  (churn detection baseline; bucketed by DAY)
+// ------------------------------------------------------------
+.create materialized-view with (backfill=true) UserDailyActivity on table raw_events {
+    raw_events
+    | extend ts = todatetime(event_timestamp)
+    | where isnotnull(ts)
+    | summarize
+        session_count = dcount(session_id),
+        event_count = count()
+      by user_id, bin(ts, 1d)
+}
+
+
+// ------------------------------------------------------------
+// View 4 — AdFunnelMetrics  (ad performance tiles; only 3 ad event types)
+// ------------------------------------------------------------
+.create materialized-view with (backfill=true) AdFunnelMetrics on table raw_events {
+    raw_events
+    | where event_type in ("ad_impression", "ad_click", "conversion")
+    | extend ts = todatetime(event_timestamp)
+    | where isnotnull(ts)
+    | summarize event_count = count() by event_type, bin(ts, 5m)
+}
+
+
+// ============================================================
+// Verification
+// ============================================================
+.show materialized-views      // expect 4 views, IsHealthy=true, IsEnabled=true
+
+EventVolumePerFiveMin | order by ts desc | take 20
+SchemaViolationRate   | where violations > 0 | order by ts desc | take 20
+UserDailyActivity     | where user_id == "user_00259" | order by ts asc
+AdFunnelMetrics       | order by ts desc | take 20
