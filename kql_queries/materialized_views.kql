@@ -8,33 +8,32 @@
 // `backfill=true` → retroactively process the existing ~1.14M rows
 // (not just future data). Takes a minute or two.
 //
-// NOTE: event_timestamp is stored as STRING → todatetime() inside the view.
-// If a view rejects todatetime() (operator restriction), fall back to the
-// Fabric-added datetime column EventProcessedUtcTime (commented under each).
+// NOTE 1: `.create async` is REQUIRED when using backfill=true — the engine
+// runs the backfill in the background and returns an operation ID immediately.
+// A plain `.create` (no async) is rejected for a backfilled view.
+//
+// NOTE 2: event_timestamp is stored as STRING → todatetime() inside the view.
+// (Confirmed working — no fallback needed. If ever rejected, aggregate on the
+// Fabric-added datetime column EventProcessedUtcTime instead, but that buckets
+// by *ingestion* time, not *event* time.)
 // ============================================================
 
 
 // ------------------------------------------------------------
 // View 1 — EventVolumePerFiveMin  (dashboard volume + volume-drop trigger)
 // ------------------------------------------------------------
-.create materialized-view with (backfill=true) EventVolumePerFiveMin on table raw_events {
+.create async materialized-view with (backfill=true) EventVolumePerFiveMin on table raw_events {
     raw_events
     | extend ts = todatetime(event_timestamp)
     | where isnotnull(ts)
     | summarize event_count = count() by bin(ts, 5m)
 }
 
-// Fallback (if todatetime() is rejected — uses Fabric's datetime column):
-// .create materialized-view with (backfill=true) EventVolumePerFiveMin on table raw_events {
-//     raw_events
-//     | summarize event_count = count() by bin(EventProcessedUtcTime, 5m)
-// }
-
 
 // ------------------------------------------------------------
 // View 2 — SchemaViolationRate  (quality gauge + degradation trigger)
 // ------------------------------------------------------------
-.create materialized-view with (backfill=true) SchemaViolationRate on table raw_events {
+.create async materialized-view with (backfill=true) SchemaViolationRate on table raw_events {
     raw_events
     | extend ts = todatetime(event_timestamp)
     | where isnotnull(ts)
@@ -48,7 +47,7 @@
 // ------------------------------------------------------------
 // View 3 — UserDailyActivity  (churn detection baseline; bucketed by DAY)
 // ------------------------------------------------------------
-.create materialized-view with (backfill=true) UserDailyActivity on table raw_events {
+.create async materialized-view with (backfill=true) UserDailyActivity on table raw_events {
     raw_events
     | extend ts = todatetime(event_timestamp)
     | where isnotnull(ts)
@@ -62,7 +61,7 @@
 // ------------------------------------------------------------
 // View 4 — AdFunnelMetrics  (ad performance tiles; only 3 ad event types)
 // ------------------------------------------------------------
-.create materialized-view with (backfill=true) AdFunnelMetrics on table raw_events {
+.create async materialized-view with (backfill=true) AdFunnelMetrics on table raw_events {
     raw_events
     | where event_type in ("ad_impression", "ad_click", "conversion")
     | extend ts = todatetime(event_timestamp)
@@ -74,6 +73,9 @@
 // ============================================================
 // Verification
 // ============================================================
+// Each `.create async` returns an OperationId. Track backfill progress with:
+// .show operations | where StartedOn > ago(1h) | where Operation == "MaterializedViewCreateOrAlter"
+
 .show materialized-views      // expect 4 views, IsHealthy=true, IsEnabled=true
 
 EventVolumePerFiveMin | order by ts desc | take 20
