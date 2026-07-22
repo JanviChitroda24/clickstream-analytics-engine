@@ -1,0 +1,55 @@
+// ============================================================
+// Hour 14 — Real-Time Dashboard tiles (clickstream_realtime_monitor)
+// ============================================================
+// 6 tiles across 3 monitoring pillars:
+//   VOLUME   → Tile 1 (event volume), Tile 2 (total events)
+//   QUALITY  → Tile 3 (violation rate), Tile 5 (duplicate count)
+//   BEHAVIOR → Tile 4 (event-type mix), Tile 6 (top users)
+//
+// Tiles 1/3 read the materialized views (H13) → cheap, pre-aggregated.
+// Tiles 2/4/5/6 read raw_events directly (one-number / distribution).
+// Blank lines separate statements so scripts/run_kql.py runs each on its own.
+// ============================================================
+
+
+// ---- Tile 1 — Event Volume Over Time (line/time chart) ----
+EventVolumePerFiveMin
+| order by ts asc
+| render timechart with (title="Event Volume (5-min buckets)")
+
+
+// ---- Tile 2 — Total Events (stat / single value) ----
+raw_events
+| count
+| project ["Total Events"] = Count
+
+
+// ---- Tile 3 — Schema Violation Rate % (stat) ----
+SchemaViolationRate
+| summarize
+    total_events = sum(total),
+    total_violations = sum(violations)
+| extend violation_rate = round(todouble(total_violations) / todouble(total_events) * 100, 2)
+| project ["Violation Rate %"] = violation_rate
+
+
+// ---- Tile 4 — Event Type Distribution (pie chart) ----
+raw_events
+| summarize event_count = count() by event_type
+| order by event_count desc
+| render piechart with (title="Event Type Distribution")
+
+
+// ---- Tile 5 — Duplicate Count (stat) ----
+raw_events
+| summarize occurrence = count() by event_id
+| where occurrence > 1
+| summarize ["Duplicate Events"] = count()
+
+
+// ---- Tile 6 — Top 10 Active Users (bar chart) ----
+raw_events
+| where isnotempty(user_id)
+| summarize event_count = count() by user_id
+| top 10 by event_count desc
+| render barchart with (title="Top 10 Users by Event Count")
