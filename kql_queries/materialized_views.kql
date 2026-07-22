@@ -76,9 +76,13 @@
 // Each `.create async` returns an OperationId. Track backfill progress with:
 // .show operations | where StartedOn > ago(1h) | where Operation == "MaterializedViewCreateOrAlter"
 
-.show materialized-views      // expect 4 views, IsHealthy=true, IsEnabled=true
+// expect 4 views, IsHealthy=true, IsEnabled=true
+.show materialized-views
 
 EventVolumePerFiveMin | order by ts desc | take 20
-SchemaViolationRate   | where violations > 0 | order by ts desc | take 20
-UserDailyActivity     | where user_id == "user_00259" | order by ts asc
-AdFunnelMetrics       | order by ts desc | take 20
+
+SchemaViolationRate | where violations > 0 | order by ts desc | take 20
+
+UserDailyActivity | where user_id == "user_00259" | order by ts asc
+
+AdFunnelMetrics | order by ts desc | take 20

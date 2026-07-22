@@ -4,6 +4,12 @@
 # Azure Event Hubs SDK (Eventstream uses Event Hubs protocol)
 azure-eventhub>=5.11.0
 
+# KQL command-line runner (scripts/run_kql.py) — query Eventhouse from terminal
+# Auth via Azure CLI (az login); pandas used to pretty-print result tables
+azure-kusto-data>=4.3.0
+azure-identity>=1.15.0
+pandas>=2.0.0
+
 # Data generation
 uuid7>=0.1.0
 faker>=18.0.0
