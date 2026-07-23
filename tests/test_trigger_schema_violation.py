@@ -1,8 +1,22 @@
 """
-Test: Data Activator Trigger 2 — Schema Violation Spike
---------------------------------------------------------
-Sends a batch of intentionally malformed events to trigger
-the schema violation alert.
+Test: Schema Violation Spike
+----------------------------
+Sends a batch of intentionally malformed events to trigger the
+schema-violation alert.
+
+IMPORTANT — which alert this feeds, and why:
+    Data Activator on an Eventstream source CANNOT detect these events.
+    Per Microsoft docs, Activator treats an empty string ("") the same as
+    a MISSING field, so a "Does not contain" rule on user_id never matches
+    our null/empty user_id events. That's a fundamental tool limitation —
+    NOT a reason to fake the data. We deliberately send REAL nulls here
+    (production data arrives as nulls/empties, not tidy marker strings).
+
+    So this test targets the correct tool: the KQL QUERYSET SCHEDULED ALERT
+    (see kql_queries/schema_violation_alert.kql), which aggregates the
+    SchemaViolationRate materialized view and fires ONE email when the rate
+    breaches the threshold. Aggregation + dedup — what per-event Activator
+    rules can't do.
 
 Usage:
     python -m tests.test_trigger_schema_violation

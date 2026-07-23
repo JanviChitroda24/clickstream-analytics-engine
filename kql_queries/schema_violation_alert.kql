@@ -1,0 +1,74 @@
+// ============================================================
+// Hour 15 — Schema Violation Alert (KQL Queryset scheduled alert)
+// ============================================================
+// WHAT: Scheduled KQL query every 5 min over SchemaViolationRate.
+//       Returns a ROW only when violation_rate > 2% in the last 10 min
+//       → Activator sends ONE email. Empty result when healthy → silence.
+//
+// WHY NOT Data Activator on Eventstream (per-event)?
+//   Event arrives → null user_id? → email  × N malformed = N emails
+//   Plus: Activator treats "" as a MISSING field → never sees real nulls.
+//
+// WHY THIS (aggregation-based, like PagerDuty / Datadog / Grafana / CloudWatch):
+//   Every 5 min → "what's the rate?" → 0.45% = empty = no email
+//                                     → 5.2%  = one row = ONE email
+//   Care about the RATE, not any single malformed event.
+//
+// WHY 2% threshold?
+//   Normal ≈ 0.45% (chaos 0.5% malformed). 2% ≈ 4× buffer above normal:
+//     0.45% healthy → no alert
+//     1.5% variance → no alert
+//     2%+  abnormal → alert
+//     10%+ catastrophe → alert
+//   Too low (0.5%) = false alarms; too high (10%) = miss moderate degradation.
+//
+// WHY ago(10m) while scheduling every 5m? — intentional OVERLAP
+//   Exact 5m lookback + scheduler 3s late = a 3s blind spot that can hide a spike.
+//   10m lookback every 5m → 5m overlap → every moment covered by ≥1 run.
+//   Checking twice is harmless (alert is on aggregated rate, not per event).
+//   Analogy: cameras that each record 10 min, a new one starts every 5 min —
+//   even if one starts late, no blind spot.
+//
+// WHY SchemaViolationRate (materialized view) not raw_events?
+//   MV already has total + violations per 5-min bucket → query reads 2–3 rows,
+//   not 1.14M. That's the Hour 13 payoff.
+//
+// SETUP (Fabric UI):
+//   1. Open pipeline_health_queries KQL Queryset
+//   2. Paste + Run (EMPTY when healthy / no recent live data — correct)
+//   3. Toolbar → "Set alert" → Activator, every 5 min, Email
+//      Fires only when the query returns a NON-EMPTY result
+//   4. Test: python -m tests.test_trigger_kql_alert
+//      (100 events over ~2 min, 60% real nulls — dominates the 5-min MV bucket)
+//
+// NOTE ON TESTING:
+//   ago(10m) looks at clock-now. Historical July 1–14 sim data → empty.
+//   The minimal 8-event script (test_trigger_schema_violation.py) is for
+//   Eventstream Activator demos ONLY — 8 events get drowned by thousands of
+//   other rows in the same 5-min MV bucket, so rate never clears 2%.
+//   Use test_trigger_kql_alert.py (60% malformed burst) for this alert.
+// ============================================================
+
+
+// ---- Production alert query (schedule every 5 min) ----
+SchemaViolationRate
+| where ts > ago(10m)
+| summarize
+    total_events = sum(total),
+    total_violations = sum(violations)
+| extend violation_rate = todouble(total_violations) / todouble(total_events) * 100
+| where violation_rate > 2.0
+| project alert_message = strcat(
+    "Schema violation rate spiked to ", tostring(round(violation_rate, 2)),
+    "% in the last 10 minutes. Total violations: ", tostring(total_violations),
+    " out of ", tostring(total_events), " events.")
+
+
+// ---- Optional: dry-run against ALL historical MV buckets (no ago filter) ----
+// Use this ONLY to sanity-check the aggregation math offline — do NOT schedule it.
+// SchemaViolationRate
+// | summarize
+//     total_events = sum(total),
+//     total_violations = sum(violations)
+// | extend violation_rate = round(todouble(total_violations) / todouble(total_events) * 100, 2)
+// | project total_events, total_violations, violation_rate
