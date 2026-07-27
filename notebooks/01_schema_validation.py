@@ -12,6 +12,11 @@
 #
 # Expected (~chaos rates, first-match wins so totals ≤ sum of H16 buckets):
 #   Bronze ~1,144,502 | Dead letter ~5K | Violation ~0.4–0.5% | Silver + DL = Bronze
+#
+# VERIFIED (2026-07-27):
+#   Bronze 1,144,502 | Silver 1,139,218 | DL 5,284 | rate 0.46% | match PASS
+#   DL: null_user 1868 | invalid_ts 1715 | null_type 1701 | null_id 0 | unknown_type 0
+#   First-match when-chain = if/elif (primary failure reason only)
 
 # =============================================================================
 # CELL 1 — Read Bronze layer
