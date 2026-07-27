@@ -14,6 +14,11 @@
 # Expected (~chaos 2% on validated input ~1,139,218):
 #   Duplicates removed ~22K | Dedup rate ~1.9–2.0% | tolerance 1–3%
 #
+# VERIFIED (2026-07-27):
+#   Input 1,139,218 | Dup event_ids 22,425 | Output 1,116,783
+#   Removed 22,435 | Rate 1.97% | PASS (1–3% band)
+#   Spot-check: 2 identical content_abandon rows → 1 after
+#
 # Pipeline: Bronze → Validate (H17) → Dedup (H18) → Sessionize (H19)
 
 # =============================================================================
