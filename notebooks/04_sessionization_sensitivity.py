@@ -263,4 +263,4 @@ RECOMMENDATION:
 """
 )
 
-print("Next: paste Cell 4 table into docs/sessionization_tradeoff.md and commit.")
+print("Next: results are locked in docs/sessionization_tradeoff.md — commit when ready.")
