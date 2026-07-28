@@ -59,6 +59,14 @@ All metrics moved **monotonically** as expected (15 → 30 → 60):
 
 **Timeout choice matters a lot on this dataset** — not a 3% tweak. Moving 15↔30↔60 swings session count by ~±30% and duration by −56% / +194%.
 
+## Key Insights
+
+1. **15-min → +29% sessions vs 30-min** — many gaps sit in the 15–30 min band (likely content pauses split incorrectly).
+2. **60-min → −34% sessions vs 30-min** — merges separate visits within an hour.
+3. **60-min avg duration (43.7 min) ≈ H19 activity-aware (40.9 min)** — aware gets similar long-form protection *without* blanket over-merge on non-content gaps.
+4. **Bounce 14.8% (15) vs 8.6% (60)** — extra 15-min “bounces” are often mid-watch pauses.
+5. **Avg events 3.2 (15) is barely a visit** — 4.2 (30) / 6.3 (60) are more meaningful.
+
 ## Trade-off Summary
 
 ### 15-minute — too aggressive for streaming
