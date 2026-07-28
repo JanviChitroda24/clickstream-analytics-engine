@@ -1,3 +1,8 @@
+# Author: Janvi Chitroda
+# Copyright (c) 2026 Janvi Chitroda. All rights reserved.
+# Project: ClickStream Analytics Engine — Portfolio
+# Unauthorized copying or redistribution of this content is prohibited.
+
 # Fabric Notebook — Dual-Layer Sessionization (Hour 19)
 # ----------------------------------------------------
 # Local mirror. Fabric name: `03_sessionization`. Attach `clickstream_lakehouse`.

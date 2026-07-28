@@ -1,3 +1,8 @@
+# Author: Janvi Chitroda
+# Copyright (c) 2026 Janvi Chitroda. All rights reserved.
+# Project: ClickStream Analytics Engine — Portfolio
+# Unauthorized copying or redistribution of this content is prohibited.
+
 # Fabric Notebook — Deduplication: Silver Validated → Silver Deduped (Hour 18)
 # ---------------------------------------------------------------------------
 # Local mirror. In Fabric, create/rename the notebook to `02_deduplication`

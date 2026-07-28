@@ -1,3 +1,10 @@
+<!--
+Author: Janvi Chitroda
+Copyright (c) 2026 Janvi Chitroda. All rights reserved.
+Project: ClickStream Analytics Engine — Portfolio
+Unauthorized copying or redistribution of this content is prohibited.
+-->
+
 # Hour 12 — Pipeline Health Monitoring Report
 
 ## Query 1: Event Volume Over Time

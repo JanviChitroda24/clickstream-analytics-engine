@@ -1,3 +1,8 @@
+# Author: Janvi Chitroda
+# Copyright (c) 2026 Janvi Chitroda. All rights reserved.
+# Project: ClickStream Analytics Engine — Portfolio
+# Unauthorized copying or redistribution of this content is prohibited.
+
 # Fabric Notebook — Schema Validation: Bronze → Silver (Hour 17)
 # ---------------------------------------------------------------
 # Local mirror. In Fabric, create/rename the notebook to `01_schema_validation`
