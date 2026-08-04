@@ -40,6 +40,12 @@ def make_test_campaigns():
     ]
 
 
+def _props(event: dict) -> dict:
+    """properties is a JSON string from _make_event (Lakehouse string fix)."""
+    raw = event["properties"]
+    return json.loads(raw) if isinstance(raw, str) else raw
+
+
 def test_session_generator():
     print("=" * 60)
     print("SESSION GENERATOR VALIDATION")
@@ -119,14 +125,14 @@ def test_session_generator():
     # Every click should reference an impression
     impression_ids = {e["event_id"] for e in impressions}
     for click in clicks:
-        ref = click["properties"]["impression_event_id"]
+        ref = _props(click)["impression_event_id"]
         assert ref in impression_ids, f"Click references unknown impression: {ref}"
     print(f"  ✅ All clicks reference valid impressions")
 
     # Every conversion should reference a click
     click_ids = {e["event_id"] for e in clicks}
     for conv in conversions:
-        ref = conv["properties"]["click_event_id"]
+        ref = _props(conv)["click_event_id"]
         assert ref in click_ids, f"Conversion references unknown click: {ref}"
     if conversions:
         print(f"  ✅ All conversions reference valid clicks")
@@ -137,12 +143,18 @@ def test_session_generator():
     print(f"\nSchema evolution (v2.2 vs v2.3):")
     for e in content_plays:
         user = next(u for u in users if u.user_id == e["user_id"])
-        has_quality = "content_quality" in e["properties"]
+        has_quality = "content_quality" in _props(e)
         if user.app_version == "2.3.0":
             assert has_quality, f"v2.3.0 user missing content_quality"
         else:
             assert not has_quality, f"v2.2.0 user should NOT have content_quality"
     print(f"  ✅ content_quality present only for v2.3.0 users")
+
+    # --- properties must be JSON string (Lakehouse schema-safe) ---
+    assert isinstance(all_events[0]["properties"], str), (
+        "properties must be json.dumps string for Lakehouse STRING inference"
+    )
+    print(f"  ✅ properties is JSON string (not nested dict)")
 
     # --- Print one complete event as JSON sample ---
     print(f"\nSample event (JSON):")

@@ -12,13 +12,15 @@
 #   PASS → silver_validated_events  (base fields clean; ready for H18 dedup)
 #   FAIL → dead_letter_events       (quarantined + validation_status + quarantined_at)
 #
-# Does NOT require nested `properties` (schema-lock OK for H17–18).
+# Does NOT require nested `properties` for the 5 base-field rules.
+# Nested properties fixed via Option 1 re-ingest before H23 (see docs/properties_schema_fix.md).
 # Use mode("overwrite") for idempotent re-runs (not append).
 #
 # Expected (~chaos rates, first-match wins so totals ≤ sum of H16 buckets):
-#   Bronze ~1,144,502 | Dead letter ~5K | Violation ~0.4–0.5% | Silver + DL = Bronze
+#   Bronze ~1.14M | Dead letter ~5K | Violation ~0.4–0.5% | Silver + DL = Bronze
+# Re-verify after properties re-ingest (counts may shift slightly).
 #
-# VERIFIED (2026-07-27):
+# VERIFIED (2026-07-27, pre–re-ingest):
 #   Bronze 1,144,502 | Silver 1,139,218 | DL 5,284 | rate 0.46% | match PASS
 #   DL: null_user 1868 | invalid_ts 1715 | null_type 1701 | null_id 0 | unknown_type 0
 #   First-match when-chain = if/elif (primary failure reason only)

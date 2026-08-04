@@ -25,6 +25,7 @@ Usage:
 """
 
 import copy
+import json
 import random
 from datetime import timedelta
 from typing import Dict, List, Tuple
@@ -122,11 +123,17 @@ class ChaosInjector:
 
         Called by main.py BEFORE inject() — schema variation is
         applied to all events, not probabilistically.
+
+        properties may be a dict (unit tests) or a JSON string
+        (session_generator._make_event after Lakehouse string fix).
         """
         if user_profile.app_version == "2.2.0":
-            props = event.get("properties", {})
+            raw = event.get("properties", {})
+            as_string = isinstance(raw, str)
+            props = json.loads(raw) if as_string else dict(raw)
             if "content_quality" in props:
                 del props["content_quality"]
+            event["properties"] = json.dumps(props) if as_string else props
         return event
 
     def get_stats_summary(self) -> str:

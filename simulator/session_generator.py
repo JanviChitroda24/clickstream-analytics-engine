@@ -21,6 +21,7 @@ Ad sequence:
 
 import random
 import uuid
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
@@ -301,6 +302,12 @@ class SessionGenerator:
     ) -> Dict:
         """
         Construct a complete event dict with all base fields + properties.
+
+        properties is json.dumps()'d to a STRING before send. Fabric Eventstream
+        Lakehouse destinations schema-on-write nested objects into a STRUCT from
+        the first batch; different event types have different keys, so later
+        events lost nested fields ({NULL}). A JSON string maps to STRING and
+        preserves all shapes — parse with get_json_object / from_json in Spark.
         """
         return {
             "event_id": override_event_id or uuid7str(),
@@ -310,5 +317,5 @@ class SessionGenerator:
             "event_timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "device_type": self.user.device_type,
             "app_version": self.user.app_version,
-            "properties": properties,
+            "properties": json.dumps(properties),
         }

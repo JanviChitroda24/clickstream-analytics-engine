@@ -9,7 +9,21 @@ Eventstream Dual-Write Smoke Test (Hour 4)
 Sends 10 test events to Fabric Eventstream via the Custom App (Event Hubs-
 compatible) endpoint. Eventstream then dual-writes them to:
   - Eventhouse  → raw_events     (hot path)
-  - Lakehouse   → bronze_events  (cold path)
+  - Lakehouse   → raw_events     (cold path; table name may be bronze_events)
+
+CRITICAL — Lakehouse schema-on-write:
+  NEVER send events with a toy properties shape (e.g. {"test_index": N}) into
+  a Lakehouse destination that will later hold production simulator data.
+  Hour 4 originally used test_index → Eventstream locked
+  properties as STRUCT<test_index:BIGINT> → real nested fields became NULL.
+
+  This script now uses realistic page_view properties (page, referrer).
+
+  After recreating the Lakehouse destination (see docs/properties_schema_fix.md):
+    1. Do NOT run this script first.
+    2. Run `python -m simulator.main --days 14` so the first batch is real data.
+    3. Use this smoke test only for connectivity checks on a throwaway table,
+       or after production ingest has already established schema.
 
 Prereqs:
   1. Eventstream `clickstream_eventstream` created with a Custom App source
@@ -17,7 +31,7 @@ Prereqs:
   2. `.env` created from `.env.example` with the real connection string:
         EVENTSTREAM_CONNECTION_STR=Endpoint=sb://...;SharedAccessKey=...;EntityPath=...
         EVENTSTREAM_NAME=<event hub name>
-  3. Deps installed:  pip install -r requirements.txt   (azure-eventhub, uuid7, python-dotenv)
+  3. Deps installed:  pip install -r requirements.txt
 
 Run:
     source csvenv/bin/activate
@@ -35,7 +49,13 @@ from simulator import config
 
 
 def build_test_events(n: int = 10) -> list[dict]:
-    """Build n minimal, schema-shaped test events (page_view)."""
+    """
+    Build n schema-shaped page_view events.
+
+    properties must match simulator.schemas EVENT_PROPERTIES[PAGE_VIEW]
+    (page, referrer) — never a toy key like test_index that can schema-lock
+    the Lakehouse destination.
+    """
     now = datetime.now(timezone.utc).isoformat()
     events = []
     for i in range(n):
@@ -47,7 +67,12 @@ def build_test_events(n: int = 10) -> list[dict]:
             "event_timestamp": now,
             "device_type": "mobile_ios",
             "app_version": "2.3.0",
-            "properties": {"test_index": i},
+# Realistic nested shape as JSON STRING (same as simulator._make_event)
+            # Nested dict would re-risk Lakehouse STRUCT inference.
+            "properties": json.dumps({
+                "page": f"/smoke-test/{i}",
+                "referrer": "direct",
+            }),
         })
     return events
 
@@ -82,6 +107,8 @@ def main() -> int:
         return 1
 
     print(f"10 test events sent to Eventstream at {datetime.now(timezone.utc).isoformat()}")
+    print("NOTE: After recreating Lakehouse dest, prefer simulator.main first — "
+          "see docs/properties_schema_fix.md")
     return 0
 
 

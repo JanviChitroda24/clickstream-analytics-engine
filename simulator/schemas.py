@@ -46,7 +46,7 @@ BASE_FIELDS = [
     "event_timestamp",    # ISO 8601 UTC
     "device_type",        # mobile_ios | mobile_android | desktop | smart_tv
     "app_version",        # "2.3.0" or "2.2.0"
-    "properties",         # dict — type-specific payload (see below)
+    "properties",         # JSON string after _make_event (Lakehouse STRING-safe)
 ]
 
 
