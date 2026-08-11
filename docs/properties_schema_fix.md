@@ -7,7 +7,7 @@ Unauthorized copying or redistribution of this content is prohibited.
 
 # Fix: Lakehouse `properties` Schema Lock
 
-**Status:** Code ready — probe with `tests.test_properties_fix` before full simulator  
+**Status:** ✅ Probe PASSED (2026-08-04) — `properties: string` + full JSON for all event types. Run full simulator next.  
 **Chosen approach:** Option 1 (fresh dest + re-ingest) **+** serialize `properties` as JSON **string**
 
 ## What Was Wrong Before

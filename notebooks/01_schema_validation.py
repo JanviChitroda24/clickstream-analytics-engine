@@ -28,7 +28,7 @@
 # =============================================================================
 # CELL 1 — Read Bronze layer
 # =============================================================================
-bronze_df = spark.sql("SELECT * FROM raw_events")
+bronze_df = spark.sql("SELECT * FROM bronze_events")
 total_count = bronze_df.count()
 print(f"Bronze events loaded: {total_count:,}")
 bronze_df.printSchema()

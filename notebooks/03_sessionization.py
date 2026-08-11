@@ -25,7 +25,7 @@
 
 SESSION_TIMEOUT_SECONDS = 1800  # 30 min — default platform visit / non-content gaps
 CONTENT_TIMEOUT_SECONDS = 3600  # 60 min — content continuation (3h was too aggressive)
-VIEWING_GAP_SECONDS = 300       # 5 min — viewing streak continuity
+VIEWING_GAP_SECONDS = 900       # 15 min — tolerates short breaks without splitting streaks
 
 CONTENT_ACTIVE_START = ["content_play", "content_resume"]
 CONTENT_CONTINUATION = [
@@ -120,9 +120,6 @@ basic_event_cols = [
     "gap_seconds",
     "is_new_session",
     "session_number",
-    "EventProcessedUtcTime",
-    "PartitionId",
-    "EventEnqueuedUtcTime",
 ]
 
 sessionized.select(*basic_event_cols).write.format("delta").mode("overwrite").saveAsTable(
@@ -287,9 +284,6 @@ aware_cols = [
     "session_number_aware",
     "is_content_continuation",
     "effective_timeout",
-    "EventProcessedUtcTime",
-    "PartitionId",
-    "EventEnqueuedUtcTime",
 ]
 aware_df.select(*aware_cols).write.format("delta").mode("overwrite").saveAsTable(
     "silver_sessionized_events_aware"
