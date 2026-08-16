@@ -7,9 +7,14 @@
 -- Hour 23 — Load facts from Lakehouse staging
 -- Run in: clickstream_warehouse SQL editor
 -- Prerequisite: notebooks/06_load_facts.py Cell 3 all ✅
---   fact_sessions_staging            (= silver_sessions_aware)
+--   fact_sessions_staging            (= silver_sessions)
 --   fact_content_engagement_staging  (content_id NOT NULL)
 -- Same pattern as Hour 22 load_dimensions_from_staging.sql
+--
+-- Verified 2026-08-16:
+--   fact_sessions            175,152
+--   fact_content_engagement  542,219  (content_id 100%, 200 distinct titles)
+--   All 4 referential-integrity checks = 0 orphans
 -- ============================================
 
 -- Clear existing rows (idempotent re-load)

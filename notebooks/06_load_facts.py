@@ -3,17 +3,17 @@
 # Project: ClickStream Analytics Engine — Portfolio
 # Unauthorized copying or redistribution of this content is prohibited.
 
-# Fabric Notebook — Load Fact Tables (Hour 23)
+# Fabric Notebook — Load Fact Tables
 # --------------------------------------------
 # Local mirror. Fabric name: `06_load_facts`.
 # Attach: clickstream_lakehouse
 #
-# Same pattern as Hour 22 (05_load_dimensions):
+# Same pattern as(05_load_dimensions):
 #   1) Build facts in Lakehouse as *_staging Delta tables
 #   2) INSERT into clickstream_warehouse.dbo.* via Warehouse SQL editor
 #      → warehouse_ddl/load_facts_from_staging.sql
 #
-# FIRST HOUR WITH REAL PROPERTIES. Bronze now stores properties as a JSON
+# WITH REAL PROPERTIES. Bronze now stores properties as a JSON
 # STRING (see docs/properties_schema_fix.md), so get_json_object() works.
 # Pre-fix, fact_content_engagement was all-NULL for content_id / durations.
 #
@@ -71,7 +71,7 @@ def prop(field: str):
 
 
 # event_timestamp is an ISO STRING — always to_timestamp() before unix_timestamp().
-# Same footgun as Hour 19; without it durations come back NULL.
+# Same footgun; without it durations come back NULL.
 def duration_seconds(start_col: str, end_col: str):
     return (
         unix_timestamp(to_timestamp(col(end_col)))
@@ -304,7 +304,7 @@ print(f"  completion_rate outside [0,1]:    {bad_rate:,} {'✅' if bad_rate == 0
 print(f"  Engagements w/o parent session:   {orphan_sessions:,} {'✅' if orphan_sessions == 0 else '❌'}")
 
 # =============================================================================
-# CELL 4 — Next step is Warehouse SQL (verified path, same as Hour 22)
+# CELL 4 — Next step is Warehouse SQL (verified path)
 # Spark cross-item INSERT into the warehouse is flaky — use the SQL editor.
 # =============================================================================
 print(
