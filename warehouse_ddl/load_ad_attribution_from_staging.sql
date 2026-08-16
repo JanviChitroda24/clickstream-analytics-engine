@@ -10,6 +10,17 @@
 --   fact_ad_attribution_staging  (one row per impression;
 --                                 click / conversion columns NULL when absent)
 -- Same pattern as load_facts_from_staging.sql
+--
+-- Verified 2026-08-16:
+--   fact_ad_attribution  46,865  (= impression count, no join fan-out)
+--     impressions_with_click   11,364
+--     clicks_with_conversion      545
+--     full_chains                 545
+--   Both referential-integrity checks = 0 orphans
+--
+--   NOTE: 69 ad_click events (11,433 raw - 11,364 joined) reference an
+--   impression that did not survive validation/dedup, taking 5 conversions
+--   with them. Fact-table CTR is therefore 24.25% vs 24.40% from raw counts.
 -- ============================================
 
 -- Clear existing rows (idempotent re-load)
